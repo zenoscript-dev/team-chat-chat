@@ -91,6 +91,8 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseTransformInterceptor());
   app.useGlobalFilters(new HttpExceptionFilter());
   // app.useGlobalFilters(new DbExceptionFilter());
+
+  // cache control middleware setup
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
@@ -99,6 +101,6 @@ async function bootstrap() {
       },
     }),
   );
-  await app.listen(3100);
+  await app.listen(3600);
 }
 bootstrap();
