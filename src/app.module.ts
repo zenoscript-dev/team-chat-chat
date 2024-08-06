@@ -5,6 +5,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ChatModule } from './chat/chat.module';
 import { CassandraModule } from './cassandra/cassandra.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-store';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -20,7 +23,14 @@ import { CassandraModule } from './cassandra/cassandra.module';
       synchronize: true,
     }),
     ChatModule,
+    AuthModule,
     CassandraModule,
+    CacheModule.register<any>({
+      isGlobal: true,
+      store: redisStore,
+      host: 'localhost',
+      port: 6379,
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],
