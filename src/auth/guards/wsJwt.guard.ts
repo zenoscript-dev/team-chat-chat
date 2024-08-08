@@ -1,10 +1,5 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
-import { verify, JsonWebTokenError } from 'jsonwebtoken';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { verify } from 'jsonwebtoken';
 import { Observable } from 'rxjs';
 import { Socket } from 'socket.io';
 import { UserTokenPayload } from '../types/tokenPayload';
@@ -25,13 +20,16 @@ export class WsJwtGuard implements CanActivate {
   }
 
   static async validateToken(client: Socket): Promise<UserTokenPayload> {
-    const { authorization } = client.handshake.headers;
-    if (!authorization) {
+    const { token } = client.handshake.auth;
+    console.log(token);
+    if (!token) {
       throw new Error('No authorization header');
     }
 
-    const token: string = authorization.split(' ')[1];
-    const payload = (await verify(token, 'testibeasecret')) as UserTokenPayload;
+    const payload = (await verify(
+      token as string,
+      process.env.JWT_ACCESS_SECRET,
+    )) as UserTokenPayload;
 
     if (payload) {
       // Validate UUID format if necessary

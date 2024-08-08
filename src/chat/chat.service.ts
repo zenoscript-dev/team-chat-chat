@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { CassandraService } from 'src/cassandra/cassandra.service';
 
 @Injectable()
@@ -6,6 +6,10 @@ export class ChatService {
   constructor(private readonly cassandraService: CassandraService) {}
 
   async getUserConversations(userId: string) {
+    Logger.log(
+      `fetching only conversations and recent messages for user ${userId}`,
+    );
+
     try {
       const conversationIds = await this.getConversations(userId);
       const conversationDetails = await Promise.all(
@@ -28,6 +32,7 @@ export class ChatService {
   }
 
   async getConversations(userId: string): Promise<string[]> {
+    Logger.log(`fetching only conversations for user ${userId}`);
     try {
       const query = `
         SELECT conversation_id
@@ -48,6 +53,8 @@ export class ChatService {
   }
 
   async getMostRecentMessage(conversationId: string): Promise<any> {
+    Logger.log(`fetching recent messages for conversations ${conversationId}`);
+
     try {
       const query = `
         SELECT message_id, sender_id, message, created_at

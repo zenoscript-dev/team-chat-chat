@@ -15,7 +15,7 @@ import { Cache } from 'cache-manager';
 import { CassandraService } from 'src/cassandra/cassandra.service';
 import { types } from 'cassandra-driver';
 
-@WebSocketGateway(3200, { cors: { origin: '*' } })
+@WebSocketGateway(3500, { cors: { origin: '*' } })
 @UseGuards(WsJwtGuard)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(

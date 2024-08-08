@@ -22,8 +22,8 @@ import { AuthModule } from './auth/auth.module';
       entities: [],
       synchronize: true,
     }),
-    ChatModule,
     AuthModule,
+    ChatModule,
     CassandraModule,
     CacheModule.register<any>({
       isGlobal: true,
