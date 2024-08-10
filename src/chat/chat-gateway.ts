@@ -55,20 +55,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('one-one-message')
-  async handleNewMessage(client: Socket, message: any) {
+  async handleNewMessage(client: Socket, messagePayload: any) {
     try {
       const parsedMessage: MessageStructure =
-        typeof message === 'string' ? JSON.parse(message) : message;
+        typeof messagePayload === 'string'
+          ? JSON.parse(messagePayload)
+          : messagePayload;
       const { senderId, recipientId, content } = parsedMessage;
+      console.log(parsedMessage);
 
-      if (!senderId || !recipientId) {
-        throw new Error('Invalid senderId or recipientId');
+      if (!senderId || !recipientId || !content) {
+        throw new Error('Invalid senderId, recipientId, or message content');
       }
 
-      const recipientSocketId = await this.getCachedSocketId(recipientId);
-      if (recipientSocketId) {
-        await this.server.to(recipientSocketId).emit('reply', content);
-      }
+      // Generate a new TimeUUID for the messageId
+      const messageId = types.TimeUuid.now();
 
       const participantIds: string[] = [senderId, recipientId];
       const conversationIds =
@@ -84,14 +85,32 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           await this.cassandraService.createConversation(participantIds);
       }
 
+      // Insert the message with the newly generated messageId
       await this.cassandraService.insertMessage(
         conversationId,
+        messageId,
         senderId,
         recipientId,
         null,
         content,
         new Date(),
       );
+
+      const recipientSocketId = await this.getCachedSocketId(recipientId);
+      if (recipientSocketId) {
+        await this.server.to(recipientSocketId).emit('reply', content);
+        await this.cassandraService.insertMessageStatus(
+          messageId,
+          recipientId,
+          'delivered',
+        );
+      } else {
+        await this.cassandraService.insertMessageStatus(
+          messageId,
+          recipientId,
+          'sent',
+        );
+      }
     } catch (error) {
       console.error('Error handling message:', error);
       throw new HttpException(

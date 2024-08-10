@@ -26,17 +26,20 @@ export class CassandraService implements OnModuleInit {
 
   private async createSchemas() {
     const queries = [
-      `CREATE TABLE IF NOT EXISTS user_connections (
-          user_id TEXT PRIMARY KEY,
-          socket_id TEXT,
-          last_active TIMESTAMP
-      );`,
       `CREATE TABLE IF NOT EXISTS conversations (
           conversation_id UUID PRIMARY KEY,
           participant_ids SET<TEXT>,
           created_at TIMESTAMP,
           last_message_at TIMESTAMP
       );`,
+      `CREATE TABLE IF NOT EXISTS message_status (
+          message_id TIMEUUID,
+          recipient_id TEXT,
+          status TEXT,
+         updated_at TIMESTAMP,
+        PRIMARY KEY (message_id, recipient_id)
+        );
+        `,
       `CREATE TABLE IF NOT EXISTS participant_conversations (
           participant_id TEXT,
           conversation_id UUID,
@@ -143,12 +146,13 @@ export class CassandraService implements OnModuleInit {
 
   async insertMessage(
     conversationId: types.Uuid,
+    messageId: types.TimeUuid,
     senderId: string,
     receiverId: string,
     groupId: types.Uuid | null,
     message: string,
     createdAt: Date,
-  ) {
+  ): Promise<void> {
     try {
       const query = `
         INSERT INTO messages (conversation_id, message_id, sender_id, receiver_id, group_id, message, created_at)
@@ -156,7 +160,7 @@ export class CassandraService implements OnModuleInit {
       `;
       const params = [
         conversationId,
-        types.TimeUuid.now(),
+        messageId,
         senderId,
         receiverId,
         groupId,
@@ -183,6 +187,74 @@ export class CassandraService implements OnModuleInit {
       return result.rowLength > 0 ? result.rows[0].participant_ids : [];
     } catch (error) {
       console.error('Error fetching participants:', error);
+      throw error;
+    }
+  }
+
+  async getMessageStatus(
+    messageId: types.TimeUuid,
+    participantId: string,
+  ): Promise<string | null> {
+    try {
+      const query = `
+            SELECT status
+            FROM message_status
+            WHERE conversation_id = ? AND message_id = ? AND participant_id = ?
+        `;
+      const result = await this.client.execute(
+        query,
+        [messageId, participantId],
+        {
+          prepare: true,
+        },
+      );
+      return result.rowLength > 0 ? result.rows[0].status : null;
+    } catch (error) {
+      console.error('Error fetching message status:', error);
+      throw error;
+    }
+  }
+
+  async updateMessageStatus(
+    conversationId: types.Uuid,
+    messageId: types.TimeUuid,
+    participantId: string,
+    status: string,
+  ) {
+    try {
+      const query = `
+            INSERT INTO message_status (message_id, participant_id, status, updated_at)
+            VALUES (?, ?, ?, ?)
+            IF NOT EXISTS
+        `;
+      const params = [messageId, participantId, status, new Date()];
+      await this.client.execute(query, params, { prepare: true });
+      console.log('Message status updated successfully');
+    } catch (error) {
+      console.error('Error updating message status:', error);
+      throw error;
+    }
+  }
+
+  async insertMessageStatus(
+    messageId: types.Uuid,
+    recipientId: string,
+    status: 'sent' | 'delivered' | 'read',
+  ) {
+    try {
+      const query = `
+        INSERT INTO message_status (message_id, recipient_id, status, updated_at)
+        VALUES (?, ?, ?, ?)
+        IF NOT EXISTS
+      `;
+      await this.client.execute(
+        query,
+        [messageId, recipientId, status, new Date()],
+        { prepare: true },
+      );
+      console.log('Message status inserted successfully');
+    } catch (error) {
+      console.error('Error inserting message status:', error);
       throw error;
     }
   }

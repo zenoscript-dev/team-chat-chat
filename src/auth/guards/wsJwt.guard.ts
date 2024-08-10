@@ -21,7 +21,6 @@ export class WsJwtGuard implements CanActivate {
 
   static async validateToken(client: Socket): Promise<UserTokenPayload> {
     const { token } = client.handshake.auth;
-    console.log(token);
     if (!token) {
       throw new Error('No authorization header');
     }
