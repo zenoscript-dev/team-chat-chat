@@ -7,9 +7,9 @@ export class CassandraConfigService {
 
   constructor() {
     this.client = new Client({
-      contactPoints: ['127.0.0.1'],
-      localDataCenter: 'datacenter1',
-      keyspace: 'chats',
+      contactPoints: [process.env.CASSANDRA_HOST],
+      localDataCenter: process.env.CASSANDRA_DATACENTER,
+      keyspace: process.env.CASSANDRA_KEYSPACE,
     });
 
     this.connect();
