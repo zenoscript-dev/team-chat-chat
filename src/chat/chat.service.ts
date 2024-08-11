@@ -1,10 +1,29 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { types } from 'cassandra-driver';
 import { CassandraService } from 'src/cassandra/cassandra.service';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly cassandraService: CassandraService) {}
+  constructor(
+    private readonly cassandraService: CassandraService,
+    @Inject('USER_SERVICE') private readonly userclient: ClientProxy,
+  ) {}
+
+  async onModuleInit() {
+    try {
+      await this.userclient.connect();
+      console.log('connected to user microservice successfully');
+    } catch (error) {
+      console.error('Error connecting to user microservice:', error);
+    }
+  }
 
   async getUserConversations(userId: string) {
     Logger.log(
@@ -18,13 +37,24 @@ export class ChatService {
             const recentMessage = await this.getMostRecentMessage(
               conversation.conversation_id,
             );
+            const userDetailsResponse = await this.userclient
+              .send<any>(
+                'user-details',
+                conversation.participant_ids.map((userid) => {
+                  if (userid !== userId) {
+                    return userid;
+                  }
+                }),
+              )
+              .toPromise();
             return {
               conversation,
               recentMessage,
+              recieverProflePic: userDetailsResponse[0]?.profilepic,
+              recieverName: userDetailsResponse[0]?.userName,
             };
           }),
         );
-
         return finalConversationDetails;
       } else {
         return [];

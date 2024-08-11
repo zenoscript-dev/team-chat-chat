@@ -8,8 +8,6 @@ import { CassandraModule } from './cassandra/cassandra.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import { AuthModule } from './auth/auth.module';
-import { MinioClientModule } from './minio-client/minio-client.module';
-import { ImageUploaderModule } from './image-uploader/image-uploader.module';
 
 @Module({
   imports: [
@@ -24,8 +22,6 @@ import { ImageUploaderModule } from './image-uploader/image-uploader.module';
       entities: [],
       synchronize: true,
     }),
-    MinioClientModule,
-    ImageUploaderModule,
     AuthModule,
     ChatModule,
     CassandraModule,
